@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>주식 투자 분석</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
@@ -10,12 +11,65 @@
             max-width: 500px;
             margin: 20px auto;
         }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #0056b3;
+        }
+
+        #stock-content ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        #stock-content li {
+            background-color: #fff;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #stock-content p {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        #stock-chart {
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 5px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            #stock-content li, #stock-content p {
+                padding: 8px;
+                font-size: 0.9em;
+            }
+        }
     </style>
 </head>
 <body>
     <h1>주식 투자 분석</h1>
-    <div id="stock-content">로딩 중...</div>
     <canvas id="stock-chart"></canvas>
+    <div id="stock-content">로딩 중...</div>
 
     <script>
         async function loadStockData() {
@@ -114,6 +168,9 @@
                             yearlyCumulativeInvestment[year] = cumulativeInvestment;
                         });
                         
+                        // 총 투자금 계산 (KRW)
+                        const totalValue = Object.values(stocks).reduce((sum, stock) => sum + stock.value, 0);
+
                         // 년도별 수익률 계산 (2024년부터)
                         const yearlyProfitRate = {};
                         const yearlyStockDetails = {}; // 각 년도의 주식별 상세 정보 저장
@@ -123,11 +180,30 @@
                                 const lastRowIndex = yearlyLastRow[year];
                                 const lastRow = rows[lastRowIndex];
                                 
-                                if (lastRow && lastRow.length >= 13) { // M열은 인덱스 12
+                                let totalHistoricalValue = 0;
+                                let currentStockInfo = [];
+
+                                const currentYear = new Date().getFullYear();
+
+                                if (parseInt(year) === currentYear) {
+                                    totalHistoricalValue = totalValue; // 현재 년도인 경우, 총 투자금을 당시 평가금으로 적용
+                                    // 현재 주식 정보 추가
+                                    currentStockInfo.push({
+                                        name: "K-SCHD",
+                                        purchasePrice: stocks["K-SCHD"].value
+                                    });
+                                    currentStockInfo.push({
+                                        name: "SCHD",
+                                        purchasePrice: stocks["SCHD"].value
+                                    });
+                                    currentStockInfo.push({
+                                        name: "TQQQ",
+                                        purchasePrice: stocks["TQQQ"].value
+                                    });
+                                } else if (lastRow && lastRow.length >= 13) { // M열은 인덱스 12
                                     const stockType = lastRow[12]?.trim(); // M열의 주식 종류
                                     
                                     // 매수 날짜 행부터 +1, +2 행까지 확인하여 3개 주식 정보 수집
-                                    const stockInfo = [];
                                     for (let offset = 0; offset <= 2; offset++) {
                                         const targetRow = rows[lastRowIndex + offset];
                                         if (targetRow && targetRow.length >= 13) {
@@ -135,7 +211,7 @@
                                             const stockPrice = cleanNumber(targetRow[7]); // H열의 주식 가격
                                             
                                             if (stockName && stockPrice > 0) {
-                                                stockInfo.push({
+                                                currentStockInfo.push({
                                                     name: stockName,
                                                     purchasePrice: stockPrice
                                                 });
@@ -144,37 +220,32 @@
                                     }
                                     
                                     // 3개 주식에 대한 수익률 계산
-                                    if (stockInfo.length > 0) {
-                                        let totalHistoricalValue = 0; // 해당 년도 3개 주식의 당시 평가 금액 (H열 3개 셀 합계)
-                                        
-                                        stockInfo.forEach(stock => {
+                                    if (currentStockInfo.length > 0) {
+                                        currentStockInfo.forEach(stock => {
                                             totalHistoricalValue += stock.purchasePrice; // H열의 값들을 모두 더함
                                         });
-                                        
-                                        if (totalHistoricalValue > 0) {
-                                            // 해당 년도까지의 누적 투자 원금
-                                            const cumulativeInvestment = yearlyCumulativeInvestment[year];
-                                            
-                                            // 해당 년도의 수익금과 수익률 계산 (당시 평가금 - 누적 투자 원금)
-                                            const yearlyProfit = totalHistoricalValue - cumulativeInvestment;
-                                            const yearlyProfitRateValue = (yearlyProfit / cumulativeInvestment * 100);
-                                            
-                                            yearlyProfitRate[year] = yearlyProfitRateValue;
-                                            yearlyStockDetails[year] = {
-                                                stockInfo: stockInfo,
-                                                historicalValue: totalHistoricalValue, // 당시 평가금
-                                                cumulativeInvestment: cumulativeInvestment,
-                                                profit: yearlyProfit
-                                            };
-                                        }
                                     }
+                                }
+                                
+                                if (totalHistoricalValue > 0) {
+                                    // 해당 년도까지의 누적 투자 원금
+                                    const cumulativeInvestment = yearlyCumulativeInvestment[year];
+                                    
+                                    // 해당 년도의 수익금과 수익률 계산 (당시 평가금 - 누적 투자 원금)
+                                    const yearlyProfit = totalHistoricalValue - cumulativeInvestment;
+                                    const yearlyProfitRateValue = (yearlyProfit / cumulativeInvestment * 100);
+                                    
+                                    yearlyProfitRate[year] = yearlyProfitRateValue;
+                                    yearlyStockDetails[year] = {
+                                        stockInfo: currentStockInfo,
+                                        historicalValue: totalHistoricalValue, // 당시 평가금
+                                        cumulativeInvestment: cumulativeInvestment,
+                                        profit: yearlyProfit
+                                    };
                                 }
                             }
                         });
 
-                        // 총 투자금 계산 (KRW)
-                        const totalValue = Object.values(stocks).reduce((sum, stock) => sum + stock.value, 0);
-                        
                         // 총 수익금과 수익률 계산
                         const totalProfit = totalValue - totalInitialInvestment;
                         const profitRate = totalInitialInvestment > 0 ? (totalProfit / totalInitialInvestment * 100) : 0;
@@ -187,54 +258,6 @@
                         console.log('주식 가격 (USD):', stockPricesUSD);
                         console.log('환율 (Q1):', exchangeRate);
                         console.log('최종 주식 데이터:', stocks);
-
-                        // HTML 업데이트
-                        const contentDiv = document.getElementById('stock-content');
-                        contentDiv.innerHTML = `
-                            <ul>
-                                <li>"K-SCHD" (티커: KOSPI 458730): 수량 ${stocks["K-SCHD"].quantity}, 가격 ₩${Math.round(stocks["K-SCHD"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["K-SCHD"].value).toLocaleString()}, 비중 ${stocks["K-SCHD"].proportion}%</li>
-                                <li>"SCHD" (티커: SCHD): 수량 ${stocks["SCHD"].quantity}, 가격 ₩${Math.round(stocks["SCHD"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["SCHD"].value).toLocaleString()}, 비중 ${stocks["SCHD"].proportion}%</li>
-                                <li>"TQQQ" (티커: TQQQ): 수량 ${stocks["TQQQ"].quantity}, 가격 ₩${Math.round(stocks["TQQQ"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["TQQQ"].value).toLocaleString()}, 비중 ${stocks["TQQQ"].proportion}%</li>
-                            </ul>
-                            <p><strong>총 투자금:</strong> ₩${Math.round(totalValue).toLocaleString()}</p>
-                            <p><strong>총 투자원금:</strong> ₩${Math.round(totalInitialInvestment).toLocaleString()}</p>
-                            <p><strong>총 수익금:</strong> <span style="color: ${totalProfit >= 0 ? 'green' : 'red'}">₩${Math.round(totalProfit).toLocaleString()}</span></p>
-                            <p><strong>총 수익률:</strong> <span style="color: ${profitRate >= 0 ? 'green' : 'red'}">${profitRate.toFixed(2)}%</span></p>
-                            <h3>년도별 투자 원금 및 수익률</h3>
-                            <ul>
-                                ${Object.keys(yearlyInvestment).sort().map(year => {
-                                    const investment = yearlyInvestment[year];
-                                    const profitRate = yearlyProfitRate[year];
-                                    const stockDetails = yearlyStockDetails[year];
-                                    let profitRateText = '';
-                                    let stockDetailsText = '';
-                                    
-                                    if (profitRate !== undefined) {
-                                        const color = profitRate >= 0 ? 'green' : 'red';
-                                        profitRateText = ` (수익률: <span style="color: ${color}">${profitRate.toFixed(2)}%</span>)`;
-                                        
-                                        // 주식별 상세 정보 표시
-                                        if (stockDetails && stockDetails.stockInfo) {
-                                            const historicalValue = stockDetails.historicalValue;
-                                            const cumulativeInvestment = stockDetails.cumulativeInvestment;
-                                            const profit = stockDetails.profit;
-                                            
-                                            stockDetailsText = `<br><small>
-                                                주식: ${stockDetails.stockInfo.map(stock => 
-                                                    `${stock.name} (당시가격: ₩${Math.round(stock.purchasePrice).toLocaleString()})`
-                                                ).join(', ')}<br>
-                                                당시 평가금: ₩${Math.round(historicalValue).toLocaleString()} | 
-                                                누적 투자원금: ₩${Math.round(cumulativeInvestment).toLocaleString()} | 
-                                                수익금: <span style="color: ${profit >= 0 ? 'green' : 'red'}">₩${Math.round(profit).toLocaleString()}</span>
-                                            </small>`;
-                                        }
-                                    }
-                                    
-                                    return `<li><strong>${year}년:</strong> ₩${Math.round(investment).toLocaleString()}${profitRateText}${stockDetailsText}</li>`;
-                                }).join('')}
-                            </ul>
-                            <p><em>환율: 1 USD = ₩${exchangeRate.toLocaleString()} (스프레드시트 Q1 셀)</em></p>
-                        `;
 
                         // 파이 차트 렌더링
                         const ctx = document.getElementById('stock-chart').getContext('2d');
@@ -336,6 +359,58 @@
                                 }
                             }]
                         });
+
+                        // HTML 업데이트
+                        const contentDiv = document.getElementById('stock-content');
+                        contentDiv.innerHTML = `
+                            <ul>
+                                <li>"K-SCHD" (티커: KOSPI 458730): 수량 ${stocks["K-SCHD"].quantity}, 가격 ₩${Math.round(stocks["K-SCHD"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["K-SCHD"].value).toLocaleString()}, 비중 ${stocks["K-SCHD"].proportion}%</li>
+                                <li>"SCHD" (티커: SCHD): 수량 ${stocks["SCHD"].quantity}, 가격 ₩${Math.round(stocks["SCHD"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["SCHD"].value).toLocaleString()}, 비중 ${stocks["SCHD"].proportion}%</li>
+                                <li>"TQQQ" (티커: TQQQ): 수량 ${stocks["TQQQ"].quantity}, 가격 ₩${Math.round(stocks["TQQQ"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["TQQQ"].value).toLocaleString()}, 비중 ${stocks["TQQQ"].proportion}%</li>
+                            </ul>
+                            <p><strong>총 투자금:</strong> ₩${Math.round(totalValue).toLocaleString()}</p>
+                            <p><strong>총 투자원금:</strong> ₩${Math.round(totalInitialInvestment).toLocaleString()}</p>
+                            <p><strong>총 수익금:</strong> <span style="color: ${totalProfit >= 0 ? 'green' : 'red'}">₩${Math.round(totalProfit).toLocaleString()}</span></p>
+                            <p><strong>총 수익률:</strong> <span style="color: ${profitRate >= 0 ? 'green' : 'red'}">${profitRate.toFixed(2)}%</span></p>
+                            <h3>년도별 투자 원금 및 수익률</h3>
+                            <ul>
+                                ${Object.keys(yearlyInvestment).sort().map(year => {
+                                    const investment = yearlyInvestment[year];
+                                    const profitRate = yearlyProfitRate[year];
+                                    const stockDetails = yearlyStockDetails[year];
+                                    let profitRateText = '';
+                                    let stockDetailsText = '';
+                                    
+                                    if (profitRate !== undefined) {
+                                        const color = profitRate >= 0 ? 'green' : 'red';
+                                        profitRateText = ` (수익률: <span style="color: ${color}">${profitRate.toFixed(2)}%</span>)`;
+                                        
+                                        // 주식별 상세 정보 표시
+                                        if (stockDetails && stockDetails.stockInfo) {
+                                            const historicalValue = stockDetails.historicalValue;
+                                            const cumulativeInvestment = stockDetails.cumulativeInvestment;
+                                            const profit = stockDetails.profit;
+                                            
+                                            stockDetailsText = `<br><small>
+                                                주식: ${stockDetails.stockInfo.map(stock => 
+                                                    `${stock.name} (당시가격: ₩${Math.round(stock.purchasePrice).toLocaleString()})`
+                                                ).join(', ')}<br>
+                                                당시 평가금: ₩${Math.round(historicalValue).toLocaleString()} | 
+                                                누적 투자원금: ₩${Math.round(cumulativeInvestment).toLocaleString()} | 
+                                                수익금: <span style="color: ${profit >= 0 ? 'green' : 'red'}">₩${Math.round(profit).toLocaleString()}</span>
+                                            </small>`;
+                                        }
+                                    }
+                                    
+                                    // 현재 년도인지 확인 (2024년 이상)
+                                    const currentYear = new Date().getFullYear();
+                                    const isCurrentYear = parseInt(year) === currentYear;
+                                    
+                                    return `<li><strong>${year}년:</strong> ₩${Math.round(investment).toLocaleString()}${profitRateText}${stockDetailsText}</li>`;
+                                }).join('')}
+                            </ul>
+                            <p><em>환율: 1 USD = ₩${exchangeRate.toLocaleString()} (스프레드시트 Q1 셀)</em></p>
+                        `;
                     },
                     error: function(error) {
                         console.error('CSV 파싱 오류:', error);
