@@ -64,6 +64,11 @@
                 font-size: 0.9em;
             }
         }
+
+        #current-stock-summary li {
+            font-size: 0.8em; /* 글자 크기 줄임 */
+            padding: 5px; /* 패딩도 줄여서 간격 조절 */
+        }
     </style>
 </head>
 <body>
@@ -363,15 +368,15 @@
                         // HTML 업데이트
                         const contentDiv = document.getElementById('stock-content');
                         contentDiv.innerHTML = `
-                            <ul>
-                                <li>"K-SCHD" (티커: KOSPI 458730): 수량 ${stocks["K-SCHD"].quantity}, 가격 ₩${Math.round(stocks["K-SCHD"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["K-SCHD"].value).toLocaleString()}, 비중 ${stocks["K-SCHD"].proportion}%</li>
-                                <li>"SCHD" (티커: SCHD): 수량 ${stocks["SCHD"].quantity}, 가격 ₩${Math.round(stocks["SCHD"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["SCHD"].value).toLocaleString()}, 비중 ${stocks["SCHD"].proportion}%</li>
-                                <li>"TQQQ" (티커: TQQQ): 수량 ${stocks["TQQQ"].quantity}, 가격 ₩${Math.round(stocks["TQQQ"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["TQQQ"].value).toLocaleString()}, 비중 ${stocks["TQQQ"].proportion}%</li>
-                            </ul>
                             <p><strong>총 투자금:</strong> ₩${Math.round(totalValue).toLocaleString()}</p>
                             <p><strong>총 투자원금:</strong> ₩${Math.round(totalInitialInvestment).toLocaleString()}</p>
                             <p><strong>총 수익금:</strong> <span style="color: ${totalProfit >= 0 ? 'green' : 'red'}">₩${Math.round(totalProfit).toLocaleString()}</span></p>
                             <p><strong>총 수익률:</strong> <span style="color: ${profitRate >= 0 ? 'green' : 'red'}">${profitRate.toFixed(2)}%</span></p>
+                            <ul id="current-stock-summary">
+                                <li>"K-SCHD" (티커: KOSPI 458730): 수량 ${stocks["K-SCHD"].quantity}, 가격 ₩${Math.round(stocks["K-SCHD"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["K-SCHD"].value).toLocaleString()}, 비중 ${stocks["K-SCHD"].proportion}%</li>
+                                <li>"SCHD" (티커: SCHD): 수량 ${stocks["SCHD"].quantity}, 가격 ₩${Math.round(stocks["SCHD"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["SCHD"].value).toLocaleString()}, 비중 ${stocks["SCHD"].proportion}%</li>
+                                <li>"TQQQ" (티커: TQQQ): 수량 ${stocks["TQQQ"].quantity}, 가격 ₩${Math.round(stocks["TQQQ"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["TQQQ"].value).toLocaleString()}, 비중 ${stocks["TQQQ"].proportion}%</li>
+                            </ul>
                             <h3>년도별 투자 원금 및 수익률</h3>
                             <ul>
                                 ${Object.keys(yearlyInvestment).sort().map(year => {
