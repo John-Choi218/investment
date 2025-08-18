@@ -409,13 +409,13 @@
                         contentDiv.innerHTML = `
                             <p><strong>총 투자금:</strong> ₩${Math.round(totalValue).toLocaleString()}</p>
                             <p><strong>총 투자원금:</strong> ₩${Math.round(totalInitialInvestment).toLocaleString()}</p>
-                            <p><strong>총 수익금:</strong> <span style="color: ${totalProfit >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">₩${Math.round(totalProfit).toLocaleString()}</span></p>
-                            <p><strong>총 수익률:</strong> <span style="color: ${profitRate >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">${profitRate.toFixed(2)}%</span></p>
-                            <p><strong>일간 수익:</strong> <span style="color: ${dailyProfit >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">₩${Math.round(dailyProfit).toLocaleString()}</span>
-                                <small>(K-SCHD: <span style="color: ${dailyStockChanges['K-SCHD'] >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">₩${Math.round(dailyStockChanges['K-SCHD']).toLocaleString()}</span>, SCHD: <span style="color: ${dailyStockChanges['SCHD'] >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">₩${Math.round(dailyStockChanges['SCHD']).toLocaleString()}</span>, TQQQ: <span style="color: ${dailyStockChanges['TQQQ'] >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">₩${Math.round(dailyStockChanges['TQQQ']).toLocaleString()}</span>)</small>
+                            <p><strong>총 수익금:</strong> <span style="color: ${totalProfit >= 0 ? 'red' : 'blue'}">₩${Math.round(totalProfit).toLocaleString()}</span></p>
+                            <p><strong>총 수익률:</strong> <span style="color: ${profitRate >= 0 ? 'red' : 'blue'}">${profitRate.toFixed(2)}%</span></p>
+                            <p><strong>일간 수익:</strong> <span style="color: ${dailyProfit >= 0 ? 'red' : 'blue'}">₩${Math.round(dailyProfit).toLocaleString()}</span>
+                                <small>(K-SCHD: <span style="color: ${dailyStockChanges['K-SCHD'] >= 0 ? 'red' : 'blue'}">₩${Math.round(dailyStockChanges['K-SCHD']).toLocaleString()}</span>, SCHD: <span style="color: ${dailyStockChanges['SCHD'] >= 0 ? 'red' : 'blue'}">₩${Math.round(dailyStockChanges['SCHD']).toLocaleString()}</span>, TQQQ: <span style="color: ${dailyStockChanges['TQQQ'] >= 0 ? 'red' : 'blue'}">₩${Math.round(dailyStockChanges['TQQQ']).toLocaleString()}</span>)</small>
                             </p>
-                            <p><strong>일간 수익률:</strong> <span style="color: ${dailyProfitRate >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">${dailyProfitRate.toFixed(2)}%</span>
-                                <small>(K-SCHD: <span style="color: ${dailyStockProfitRates['K-SCHD'] >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">${dailyStockProfitRates['K-SCHD'].toFixed(2)}%</span>, SCHD: <span style="color: ${dailyStockProfitRates['SCHD'] >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">${dailyStockProfitRates['SCHD'].toFixed(2)}%</span>, TQQQ: <span style="color: ${dailyStockProfitRates['TQQQ'] >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">${dailyStockProfitRates['TQQQ'].toFixed(2)}%</span>)</small>
+                            <p><strong>일간 수익률:</strong> <span style="color: ${dailyProfitRate >= 0 ? 'red' : 'blue'}">${dailyProfitRate.toFixed(2)}%</span>
+                                <small>(K-SCHD: <span style="color: ${dailyStockProfitRates['K-SCHD'] >= 0 ? 'red' : 'blue'}">${dailyStockProfitRates['K-SCHD'].toFixed(2)}%</span>, SCHD: <span style="color: ${dailyStockProfitRates['SCHD'] >= 0 ? 'red' : 'blue'}">${dailyStockProfitRates['SCHD'].toFixed(2)}%</span>, TQQQ: <span style="color: ${dailyStockProfitRates['TQQQ'] >= 0 ? 'red' : 'blue'}">${dailyStockProfitRates['TQQQ'].toFixed(2)}%</span>)</small>
                             </p>
                             <ul id="current-stock-summary">
                                 <li>"K-SCHD" (티커: KOSPI 458730): 수량 ${stocks["K-SCHD"].quantity}, 가격 ₩${Math.round(stocks["K-SCHD"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["K-SCHD"].value).toLocaleString()}, 비중 ${stocks["K-SCHD"].proportion}%</li>
@@ -432,7 +432,7 @@
                                     let stockDetailsText = '';
                                     
                                     if (profitRate !== undefined) {
-                                        const color = profitRate >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue';
+                                        const color = profitRate >= 0 ? 'red' : 'blue';
                                         profitRateText = ` (수익률: <span style="color: ${color}">${profitRate.toFixed(2)}%</span>)`;
                                         
                                         // 주식별 상세 정보 표시
@@ -447,7 +447,7 @@
                                                 ).join(', ')}<br>
                                                 당시 평가금: ₩${Math.round(historicalValue).toLocaleString()} | 
                                                 누적 투자원금: ₩${Math.round(cumulativeInvestment).toLocaleString()} | 
-                                                수익금: <span style="color: ${profit >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">₩${Math.round(profit).toLocaleString()}</span>
+                                                수익금: <span style="color: ${profit >= 0 ? 'red' : 'blue'}">₩${Math.round(profit).toLocaleString()}</span>
                                             </small>`;
                                         }
                                     }
