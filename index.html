@@ -74,6 +74,8 @@
 <body>
     <h1>주식 투자 분석</h1>
     <canvas id="stock-chart"></canvas>
+    <div id="chart-filters" style="text-align: center; margin: 20px 0;"></div>
+    <canvas id="investment-trend-chart" style="margin-top: 10px;"></canvas>
     <div id="stock-content">로딩 중...</div>
 
     <script>
@@ -299,9 +301,53 @@
                             stocks[stock].proportion = totalValue > 0 ? (stocks[stock].value / totalValue * 100).toFixed(2) : 0;
                         }
 
+                        // 투자 추세 그래프 데이터 준비
+                        const trendLabels = [];
+                        const cumulativeInvestmentData = [];
+                        const valuationData = [];
+                        let trendCumulativeInvestment = 0;
+                        const startDate = new Date('2024-06-03');
+
+                        // 5행부터 모든 데이터를 순회하며 누적 투자 원금을 계산하고, 시작일 이후 데이터만 그래프에 추가
+                        for (let i = 4; i < rows.length; i++) {
+                            const row = rows[i];
+                            if (row.length >= 8) {
+                                const investment = cleanNumber(row[3]); // D열
+
+                                // 매수일과 관계없이 누적 투자 원금을 계속 더해나감
+                                if (investment > 0) {
+                                    trendCumulativeInvestment += investment;
+                                }
+
+                                const year = row[0]?.trim();
+                                const month = row[1]?.trim().padStart(2, '0');
+                                const day = row[2]?.trim().padStart(2, '0');
+                                const purchaseDateStr = `${year}-${month}-${day}`;
+                                const purchaseDate = new Date(purchaseDateStr);
+
+                                // 날짜가 유효하고 시작일 이후인 경우, 그래프 데이터를 추가
+                                if (year && month && day && !isNaN(purchaseDate.getTime()) && purchaseDate >= startDate) {
+                                    if (investment > 0) {
+                                        // 당시 평가액 계산 (현재 행 H열 + 아래 2개 행 H열의 합)
+                                        let valuation = cleanNumber(rows[i][7]); // H열
+                                        if (i + 1 < rows.length) {
+                                            valuation += cleanNumber(rows[i + 1][7]);
+                                        }
+                                        if (i + 2 < rows.length) {
+                                            valuation += cleanNumber(rows[i + 2][7]);
+                                        }
+
+                                        trendLabels.push(purchaseDateStr);
+                                        // 현재까지의 총 누적 투자 원금을 저장
+                                        cumulativeInvestmentData.push(trendCumulativeInvestment);
+                                        valuationData.push(valuation);
+                                    }
+                                }
+                            }
+                        }
+
                         console.log('주식 가격 (USD):', stockPricesUSD);
                         console.log('환율 (Q1):', exchangeRate);
-                        console.log('최종 주식 데이터:', stocks);
 
                         // 파이 차트 렌더링
                         const ctx = document.getElementById('stock-chart').getContext('2d');
@@ -403,6 +449,104 @@
                                 }
                             }]
                         });
+
+                        // 투자 추세 라인 차트 렌더링
+                        const trendCtx = document.getElementById('investment-trend-chart').getContext('2d');
+                        const trendChart = new Chart(trendCtx, {
+                            type: 'line',
+                            data: {
+                                labels: [], // 초기에는 비워둠
+                                datasets: [
+                                    {
+                                        label: '누적 투자 원금',
+                                        data: [], // 초기에는 비워둠
+                                        borderColor: 'rgba(255, 99, 132, 1)',
+                                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                        fill: false,
+                                        tension: 0.1
+                                    },
+                                    {
+                                        label: '당시 평가액',
+                                        data: [], // 초기에는 비워둠
+                                        borderColor: 'rgba(54, 162, 235, 1)',
+                                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                        fill: false,
+                                        tension: 0.1
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: '투자 원금 및 평가액 추세'
+                                    },
+                                    tooltip: {
+                                        mode: 'index',
+                                        intersect: false
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        display: true,
+                                        title: {
+                                            display: true,
+                                            text: '매수일'
+                                        }
+                                    },
+                                    y: {
+                                        display: true,
+                                        title: {
+                                            display: true,
+                                            text: '금액 (₩)'
+                                        }
+                                    }
+                                }
+                            }
+                        });
+
+                        // 차트 필터링 및 업데이트 함수
+                        function updateTrendChart(filterYear) {
+                            const filteredLabels = [];
+                            const filteredCumulativeData = [];
+                            const filteredValuationData = [];
+
+                            for (let i = 0; i < trendLabels.length; i++) {
+                                const year = trendLabels[i].substring(0, 4);
+                                if (filterYear === 'all' || year === filterYear) {
+                                    filteredLabels.push(trendLabels[i]);
+                                    filteredCumulativeData.push(cumulativeInvestmentData[i]);
+                                    filteredValuationData.push(valuationData[i]);
+                                }
+                            }
+
+                            trendChart.data.labels = filteredLabels;
+                            trendChart.data.datasets[0].data = filteredCumulativeData;
+                            trendChart.data.datasets[1].data = filteredValuationData;
+                            trendChart.update();
+                        }
+
+                        // 필터 버튼 생성
+                        const filterContainer = document.getElementById('chart-filters');
+                        
+                        // '전체' 버튼
+                        const allButton = document.createElement('button');
+                        allButton.textContent = '전체';
+                        allButton.onclick = () => updateTrendChart('all');
+                        filterContainer.appendChild(allButton);
+
+                        // 년도별 버튼 (2024년부터 현재 년도까지)
+                        const currentYear = new Date().getFullYear();
+                        for (let year = 2024; year <= currentYear; year++) {
+                            const yearButton = document.createElement('button');
+                            yearButton.textContent = `${year}년`;
+                            yearButton.onclick = () => updateTrendChart(String(year));
+                            filterContainer.appendChild(yearButton);
+                        }
+
+                        // 초기 차트 로드 (전체 데이터)
+                        updateTrendChart('all');
 
                         // HTML 업데이트
                         const contentDiv = document.getElementById('stock-content');
