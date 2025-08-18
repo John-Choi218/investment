@@ -90,7 +90,7 @@
 
                         // 첫 번째 행에서 주식 가격과 환율 가져오기
                         const headerRow = rows[0];
-                        if (!headerRow || headerRow.length < 17) {
+                        if (!headerRow || headerRow.length < 22) {
                             throw new Error('헤더 행 데이터 부족');
                         }
 
@@ -107,6 +107,14 @@
                             "TQQQ": cleanNumber(headerRow[15])    // P1
                         };
                         const exchangeRate = cleanNumber(headerRow[16]) || 1350; // Q1, 기본값 1350
+
+                        // 어제 종가 (USD)
+                        const prevStockPricesUSD = {
+                            "K-SCHD": cleanNumber(headerRow[18]), // S1
+                            "SCHD": cleanNumber(headerRow[19]),   // T1
+                            "TQQQ": cleanNumber(headerRow[20])    // U1
+                        };
+                        const prevExchangeRate = cleanNumber(headerRow[21]) || exchangeRate; // V1, 기본값은 현재 환율
 
                         // 원화로 변환된 가격
                         const stockPricesKRW = {
@@ -175,6 +183,37 @@
                         
                         // 총 투자금 계산 (KRW)
                         const totalValue = Object.values(stocks).reduce((sum, stock) => sum + stock.value, 0);
+
+                        // 어제 기준 총 투자금 계산 (KRW)
+                        const prevTotalValue = 
+                            (stocks["K-SCHD"].quantity * prevStockPricesUSD["K-SCHD"]) +
+                            (stocks["SCHD"].quantity * prevStockPricesUSD["SCHD"] * prevExchangeRate) +
+                            (stocks["TQQQ"].quantity * prevStockPricesUSD["TQQQ"] * prevExchangeRate);
+
+                        // 일간 수익 및 수익률 계산
+                        const dailyProfit = totalValue - prevTotalValue;
+                        const dailyProfitRate = prevTotalValue > 0 ? (dailyProfit / prevTotalValue * 100) : 0;
+
+                        // 주식별 일간 변동 계산
+                        const dailyStockChanges = {
+                            "K-SCHD": stocks["K-SCHD"].value - (stocks["K-SCHD"].quantity * prevStockPricesUSD["K-SCHD"]),
+                            "SCHD": stocks["SCHD"].value - (stocks["SCHD"].quantity * prevStockPricesUSD["SCHD"] * prevExchangeRate),
+                            "TQQQ": stocks["TQQQ"].value - (stocks["TQQQ"].quantity * prevStockPricesUSD["TQQQ"] * prevExchangeRate)
+                        };
+
+                        // 주식별 어제 기준 평가금
+                        const prevStockValues = {
+                            "K-SCHD": stocks["K-SCHD"].quantity * prevStockPricesUSD["K-SCHD"],
+                            "SCHD": stocks["SCHD"].quantity * prevStockPricesUSD["SCHD"] * prevExchangeRate,
+                            "TQQQ": stocks["TQQQ"].quantity * prevStockPricesUSD["TQQQ"] * prevExchangeRate
+                        };
+
+                        // 주식별 일간 수익률 계산
+                        const dailyStockProfitRates = {
+                            "K-SCHD": prevStockValues["K-SCHD"] > 0 ? (dailyStockChanges["K-SCHD"] / prevStockValues["K-SCHD"] * 100) : 0,
+                            "SCHD": prevStockValues["SCHD"] > 0 ? (dailyStockChanges["SCHD"] / prevStockValues["SCHD"] * 100) : 0,
+                            "TQQQ": prevStockValues["TQQQ"] > 0 ? (dailyStockChanges["TQQQ"] / prevStockValues["TQQQ"] * 100) : 0
+                        };
 
                         // 년도별 수익률 계산 (2024년부터)
                         const yearlyProfitRate = {};
@@ -370,8 +409,14 @@
                         contentDiv.innerHTML = `
                             <p><strong>총 투자금:</strong> ₩${Math.round(totalValue).toLocaleString()}</p>
                             <p><strong>총 투자원금:</strong> ₩${Math.round(totalInitialInvestment).toLocaleString()}</p>
-                            <p><strong>총 수익금:</strong> <span style="color: ${totalProfit >= 0 ? 'green' : 'red'}">₩${Math.round(totalProfit).toLocaleString()}</span></p>
-                            <p><strong>총 수익률:</strong> <span style="color: ${profitRate >= 0 ? 'green' : 'red'}">${profitRate.toFixed(2)}%</span></p>
+                            <p><strong>총 수익금:</strong> <span style="color: ${totalProfit >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">₩${Math.round(totalProfit).toLocaleString()}</span></p>
+                            <p><strong>총 수익률:</strong> <span style="color: ${profitRate >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">${profitRate.toFixed(2)}%</span></p>
+                            <p><strong>일간 수익:</strong> <span style="color: ${dailyProfit >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">₩${Math.round(dailyProfit).toLocaleString()}</span>
+                                <small>(K-SCHD: <span style="color: ${dailyStockChanges['K-SCHD'] >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">₩${Math.round(dailyStockChanges['K-SCHD']).toLocaleString()}</span>, SCHD: <span style="color: ${dailyStockChanges['SCHD'] >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">₩${Math.round(dailyStockChanges['SCHD']).toLocaleString()}</span>, TQQQ: <span style="color: ${dailyStockChanges['TQQQ'] >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">₩${Math.round(dailyStockChanges['TQQQ']).toLocaleString()}</span>)</small>
+                            </p>
+                            <p><strong>일간 수익률:</strong> <span style="color: ${dailyProfitRate >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">${dailyProfitRate.toFixed(2)}%</span>
+                                <small>(K-SCHD: <span style="color: ${dailyStockProfitRates['K-SCHD'] >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">${dailyStockProfitRates['K-SCHD'].toFixed(2)}%</span>, SCHD: <span style="color: ${dailyStockProfitRates['SCHD'] >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">${dailyStockProfitRates['SCHD'].toFixed(2)}%</span>, TQQQ: <span style="color: ${dailyStockProfitRates['TQQQ'] >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">${dailyStockProfitRates['TQQQ'].toFixed(2)}%</span>)</small>
+                            </p>
                             <ul id="current-stock-summary">
                                 <li>"K-SCHD" (티커: KOSPI 458730): 수량 ${stocks["K-SCHD"].quantity}, 가격 ₩${Math.round(stocks["K-SCHD"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["K-SCHD"].value).toLocaleString()}, 비중 ${stocks["K-SCHD"].proportion}%</li>
                                 <li>"SCHD" (티커: SCHD): 수량 ${stocks["SCHD"].quantity}, 가격 ₩${Math.round(stocks["SCHD"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["SCHD"].value).toLocaleString()}, 비중 ${stocks["SCHD"].proportion}%</li>
@@ -387,7 +432,7 @@
                                     let stockDetailsText = '';
                                     
                                     if (profitRate !== undefined) {
-                                        const color = profitRate >= 0 ? 'green' : 'red';
+                                        const color = profitRate >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue';
                                         profitRateText = ` (수익률: <span style="color: ${color}">${profitRate.toFixed(2)}%</span>)`;
                                         
                                         // 주식별 상세 정보 표시
@@ -402,7 +447,7 @@
                                                 ).join(', ')}<br>
                                                 당시 평가금: ₩${Math.round(historicalValue).toLocaleString()} | 
                                                 누적 투자원금: ₩${Math.round(cumulativeInvestment).toLocaleString()} | 
-                                                수익금: <span style="color: ${profit >= 0 ? 'green' : 'red'}">₩${Math.round(profit).toLocaleString()}</span>
+                                                수익금: <span style="color: ${profit >= 0 ? 'rgba(255, 99, 132, 1)' : 'blue'}">₩${Math.round(profit).toLocaleString()}</span>
                                             </small>`;
                                         }
                                     }
