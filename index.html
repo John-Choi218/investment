@@ -69,13 +69,23 @@
             font-size: 0.8em; /* 글자 크기 줄임 */
             padding: 5px; /* 패딩도 줄여서 간격 조절 */
         }
+
+        @media (max-width: 768px) {
+            #trend-chart-container {
+                position: relative;
+                height: 50vh; /* 뷰포트 높이의 50% */
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
     <h1>주식 투자 분석</h1>
     <canvas id="stock-chart"></canvas>
     <div id="chart-filters" style="text-align: center; margin: 20px 0;"></div>
-    <canvas id="investment-trend-chart" style="margin-top: 10px;"></canvas>
+    <div id="trend-chart-container" style="margin-top: 10px;">
+        <canvas id="investment-trend-chart"></canvas>
+    </div>
     <div id="stock-content">로딩 중...</div>
 
     <script>
