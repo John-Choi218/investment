@@ -452,6 +452,8 @@
 
                         // 투자 추세 라인 차트 렌더링
                         const trendCtx = document.getElementById('investment-trend-chart').getContext('2d');
+                        const isMobile = window.innerWidth < 768; // 모바일 기기 확인
+
                         const trendChart = new Chart(trendCtx, {
                             type: 'line',
                             data: {
@@ -477,6 +479,7 @@
                             },
                             options: {
                                 responsive: true,
+                                maintainAspectRatio: !isMobile, // 모바일에서 비율 유지 해제
                                 plugins: {
                                     title: {
                                         display: true,
@@ -500,6 +503,18 @@
                                         title: {
                                             display: true,
                                             text: '금액 (₩)'
+                                        },
+                                        ticks: {
+                                            maxTicksLimit: isMobile ? 6 : 8, // 모바일에서 눈금 수 조절
+                                            callback: function(value, index, ticks) {
+                                                if (value >= 100000000) {
+                                                    return (value / 100000000).toPrecision(3) + '억';
+                                                }
+                                                if (value >= 10000) {
+                                                    return (value / 10000) + '만';
+                                                }
+                                                return value.toLocaleString();
+                                            }
                                         }
                                     }
                                 }
