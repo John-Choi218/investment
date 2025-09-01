@@ -356,6 +356,23 @@
                             }
                         }
 
+                        // 마지막 데이터의 날짜가 오늘이 아닌 경우, 오늘 데이터 추가
+                        if (trendLabels.length > 0) {
+                            const lastDate = new Date(trendLabels[trendLabels.length - 1]);
+                            const today = new Date();
+                            
+                            // 날짜 비교를 위해 시간 부분을 제거
+                            lastDate.setHours(0, 0, 0, 0);
+                            today.setHours(0, 0, 0, 0);
+                            
+                            if (lastDate.getTime() !== today.getTime()) {
+                                const todayStr = today.toISOString().split('T')[0];
+                                trendLabels.push(todayStr);
+                                cumulativeInvestmentData.push(trendCumulativeInvestment);
+                                valuationData.push(totalValue); // 현재 총 평가액 사용
+                            }
+                        }
+
                         console.log('주식 가격 (USD):', stockPricesUSD);
                         console.log('환율 (Q1):', exchangeRate);
 
@@ -588,8 +605,8 @@
                             </p>
                             <ul id="current-stock-summary">
                                 <li>"K-SCHD" (티커: KOSPI 458730): 수량 ${stocks["K-SCHD"].quantity}, 가격 ₩${Math.round(stocks["K-SCHD"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["K-SCHD"].value).toLocaleString()}, 비중 ${stocks["K-SCHD"].proportion}%</li>
-                                <li>"SCHD" (티커: SCHD): 수량 ${stocks["SCHD"].quantity}, 가격 ₩${Math.round(stocks["SCHD"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["SCHD"].value).toLocaleString()}, 비중 ${stocks["SCHD"].proportion}%</li>
-                                <li>"TQQQ" (티커: TQQQ): 수량 ${stocks["TQQQ"].quantity}, 가격 ₩${Math.round(stocks["TQQQ"].priceKRW).toLocaleString()}, 투자금 ₩${Math.round(stocks["TQQQ"].value).toLocaleString()}, 비중 ${stocks["TQQQ"].proportion}%</li>
+                                <li>"SCHD" (티커: SCHD): 수량 ${stocks["SCHD"].quantity}, 가격 ₩${Math.round(stocks["SCHD"].priceKRW).toLocaleString()} ($${stockPricesUSD["SCHD"].toFixed(2)}), 투자금 ₩${Math.round(stocks["SCHD"].value).toLocaleString()}, 비중 ${stocks["SCHD"].proportion}%</li>
+                                <li>"TQQQ" (티커: TQQQ): 수량 ${stocks["TQQQ"].quantity}, 가격 ₩${Math.round(stocks["TQQQ"].priceKRW).toLocaleString()} ($${stockPricesUSD["TQQQ"].toFixed(2)}), 투자금 ₩${Math.round(stocks["TQQQ"].value).toLocaleString()}, 비중 ${stocks["TQQQ"].proportion}%</li>
                             </ul>
                             <h3>년도별 투자 원금 및 수익률</h3>
                             <ul>
