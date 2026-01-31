@@ -230,7 +230,9 @@
                         // 년도별 수익률 계산 (2024년부터)
                         const yearlyProfitRate = {};
                         const yearlyStockDetails = {}; // 각 년도의 주식별 상세 정보 저장
+                        const yearlyLastValuation = {}; // 각 년도의 마지막 평가액 저장
                         
+                        // 먼저 모든 년도의 마지막 평가액을 계산
                         Object.keys(yearlyInvestment).forEach(year => {
                             if (parseInt(year) >= 2024) {
                                 const lastRowIndex = yearlyLastRow[year];
@@ -284,12 +286,83 @@
                                 }
                                 
                                 if (totalHistoricalValue > 0) {
-                                    // 해당 년도까지의 누적 투자 원금
+                                    yearlyLastValuation[year] = totalHistoricalValue;
+                                }
+                            }
+                        });
+                        
+                        // 년도별 수익률 및 수익금 계산
+                        Object.keys(yearlyInvestment).forEach(year => {
+                            if (parseInt(year) >= 2024) {
+                                const lastRowIndex = yearlyLastRow[year];
+                                const lastRow = rows[lastRowIndex];
+                                
+                                let totalHistoricalValue = yearlyLastValuation[year] || 0;
+                                let currentStockInfo = [];
+
+                                const currentYear = new Date().getFullYear();
+
+                                if (parseInt(year) === currentYear) {
+                                    totalHistoricalValue = totalValue; // 현재 년도인 경우, 총 투자금을 당시 평가금으로 적용
+                                    // 현재 주식 정보 추가
+                                    currentStockInfo.push({
+                                        name: "K-SCHD",
+                                        purchasePrice: stocks["K-SCHD"].value
+                                    });
+                                    currentStockInfo.push({
+                                        name: "SCHD",
+                                        purchasePrice: stocks["SCHD"].value
+                                    });
+                                    currentStockInfo.push({
+                                        name: "TQQQ",
+                                        purchasePrice: stocks["TQQQ"].value
+                                    });
+                                } else if (lastRow && lastRow.length >= 13) { // M열은 인덱스 12
+                                    // 매수 날짜 행부터 +1, +2 행까지 확인하여 3개 주식 정보 수집
+                                    for (let offset = 0; offset <= 2; offset++) {
+                                        const targetRow = rows[lastRowIndex + offset];
+                                        if (targetRow && targetRow.length >= 13) {
+                                            const stockName = targetRow[12]?.trim(); // M열의 주식 종류
+                                            const stockPrice = cleanNumber(targetRow[7]); // H열의 주식 가격
+                                            
+                                            if (stockName && stockPrice > 0) {
+                                                currentStockInfo.push({
+                                                    name: stockName,
+                                                    purchasePrice: stockPrice
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                if (totalHistoricalValue > 0) {
+                                    const yearInt = parseInt(year);
                                     const cumulativeInvestment = yearlyCumulativeInvestment[year];
                                     
-                                    // 해당 년도의 수익금과 수익률 계산 (당시 평가금 - 누적 투자 원금)
-                                    const yearlyProfit = totalHistoricalValue - cumulativeInvestment;
-                                    const yearlyProfitRateValue = (yearlyProfit / cumulativeInvestment * 100);
+                                    let yearlyProfit;
+                                    let yearlyProfitRateValue;
+                                    
+                                    // 2025년부터는 전년도 기준으로 계산
+                                    if (yearInt >= 2025) {
+                                        const prevYear = String(yearInt - 1);
+                                        const prevYearValuation = yearlyLastValuation[prevYear] || 0;
+                                        const prevYearCumulativeInvestment = yearlyCumulativeInvestment[prevYear] || 0;
+                                        
+                                        // 수익률: (당해년도 마지막 평가액 - 전년도 마지막 평가액) / 전년도 마지막 평가액 * 100
+                                        if (prevYearValuation > 0) {
+                                            yearlyProfitRateValue = ((totalHistoricalValue - prevYearValuation) / prevYearValuation * 100);
+                                        } else {
+                                            yearlyProfitRateValue = 0;
+                                        }
+                                        
+                                        // 수익금: 당해년도 마지막 평가액 - 전년도 마지막 평가액 - (당해년도 누적 투자원금 - 전년도 누적 투자원금)
+                                        const yearInvestment = cumulativeInvestment - prevYearCumulativeInvestment;
+                                        yearlyProfit = totalHistoricalValue - prevYearValuation - yearInvestment;
+                                    } else {
+                                        // 2024년은 기존 로직 유지
+                                        yearlyProfit = totalHistoricalValue - cumulativeInvestment;
+                                        yearlyProfitRateValue = (yearlyProfit / cumulativeInvestment * 100);
+                                    }
                                     
                                     yearlyProfitRate[year] = yearlyProfitRateValue;
                                     yearlyStockDetails[year] = {
